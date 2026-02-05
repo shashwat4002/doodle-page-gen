@@ -1,0 +1,267 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT_RESEARCHER
+  MENTOR
+  ADMIN
+}
+
+enum ResearchStage {
+  EXPLORATION
+  TOPIC_DISCOVERY
+  LITERATURE_REVIEW
+  METHODOLOGY
+  EXECUTION
+  DOCUMENTATION
+  PUBLICATION
+}
+
+enum CollaborationType {
+  PEER
+  MENTOR
+}
+
+enum CollaborationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum NotificationType {
+  MENTOR_FEEDBACK
+  MATCH_REQUEST
+  MILESTONE_COMPLETED
+  COMMUNITY_REPLY
+  RESOURCE_RECOMMENDATION
+  SYSTEM
+}
+
+model User {
+  id                    String                 @id @default(cuid())
+  email                 String                 @unique
+  passwordHash          String?
+  fullName              String
+  academicLevel         String?
+  intendedFieldOfStudy  String?
+  researchInterests     String[]               @default([])
+  skillTags             String[]               @default([])
+  role                  Role                   @default(STUDENT_RESEARCHER)
+  profilePhotoUrl       String?
+  googleId              String?                @unique
+  currentJourneyStage   ResearchStage?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+
+  projects              Project[]              @relation("OwnedProjects")
+  projectUpdates        ProjectUpdate[]        @relation("UserProjectUpdates")
+  mentorFeedback        MentorFeedback[]       @relation("MentorFeedbackAuthor")
+
+  sentCollabRequests    CollaborationRequest[] @relation("SentCollabRequests")
+  receivedCollabRequests CollaborationRequest[] @relation("ReceivedCollabRequests")
+
+  notifications         Notification[]
+  createdThreads        DiscussionThread[]     @relation("CreatedThreads")
+  posts                 DiscussionPost[]
+  postUpvotes           PostUpvote[]
+
+  resourceBookmarks     ResourceBookmark[]
+  resourceViews         ResourceView[]
+
+  passwordResetTokens   PasswordResetToken[]
+}
+
+model Project {
+  id               String                 @id @default(cuid())
+  ownerId          String
+  title            String
+  description      String?
+  status           String                 @default("active")
+  currentStage     ResearchStage?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  owner            User                   @relation("OwnedProjects", fields: [ownerId], references: [id])
+  stages           ResearchStageProgress[]
+  updates          ProjectUpdate[]
+  documents        ProjectDocument[]
+  mentorFeedback   MentorFeedback[]
+  collaborationRequests CollaborationRequest[]
+}
+
+model ResearchStageProgress {
+  id               String           @id @default(cuid())
+  projectId        String
+  stage            ResearchStage
+  completion       Int              @default(0)
+  milestoneTitle   String?
+  milestoneDueDate DateTime?
+  notes            String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  project          Project          @relation(fields: [projectId], references: [id])
+  documents        ProjectDocument[]
+  mentorFeedback   MentorFeedback[]
+
+  @@unique([projectId, stage], name: "projectId_stage")
+}
+
+model ProjectDocument {
+  id           String                @id @default(cuid())
+  projectId    String
+  stageId      String?
+  name         String
+  url          String
+  fileType     String?
+  createdAt    DateTime              @default(now())
+
+  project      Project               @relation(fields: [projectId], references: [id])
+  stage        ResearchStageProgress? @relation(fields: [stageId], references: [id])
+}
+
+model ProjectUpdate {
+  id           String   @id @default(cuid())
+  projectId    String
+  authorId     String
+  content      String
+  createdAt    DateTime @default(now())
+
+  project      Project  @relation(fields: [projectId], references: [id])
+  author       User     @relation("UserProjectUpdates", fields: [authorId], references: [id])
+}
+
+model MentorFeedback {
+  id           String                @id @default(cuid())
+  mentorId     String
+  projectId    String
+  stageId      String?
+  content      String
+  createdAt    DateTime              @default(now())
+
+  mentor       User                  @relation("MentorFeedbackAuthor", fields: [mentorId], references: [id])
+  project      Project               @relation(fields: [projectId], references: [id])
+  stage        ResearchStageProgress? @relation(fields: [stageId], references: [id])
+}
+
+model CollaborationRequest {
+  id           String               @id @default(cuid())
+  fromUserId   String
+  toUserId     String
+  projectId    String?
+  type         CollaborationType
+  status       CollaborationStatus  @default(PENDING)
+  message      String?
+  createdAt    DateTime             @default(now())
+  respondedAt  DateTime?
+
+  fromUser     User                 @relation("SentCollabRequests", fields: [fromUserId], references: [id])
+  toUser       User                 @relation("ReceivedCollabRequests", fields: [toUserId], references: [id])
+  project      Project?             @relation(fields: [projectId], references: [id])
+}
+
+model DiscussionThread {
+  id           String           @id @default(cuid())
+  title        String
+  category     String
+  createdById  String
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  createdBy    User             @relation("CreatedThreads", fields: [createdById], references: [id])
+  posts        DiscussionPost[]
+}
+
+model DiscussionPost {
+  id           String           @id @default(cuid())
+  threadId     String
+  authorId     String
+  parentId     String?
+  content      String
+  createdAt    DateTime         @default(now())
+
+  thread       DiscussionThread @relation(fields: [threadId], references: [id])
+  author       User             @relation(fields: [authorId], references: [id])
+  parent       DiscussionPost?  @relation("PostReplies", fields: [parentId], references: [id])
+  replies      DiscussionPost[] @relation("PostReplies")
+
+  upvotes      PostUpvote[]
+}
+
+model PostUpvote {
+  id           String           @id @default(cuid())
+  postId       String
+  userId       String
+  createdAt    DateTime         @default(now())
+
+  post         DiscussionPost   @relation(fields: [postId], references: [id])
+  user         User             @relation(fields: [userId], references: [id])
+
+  @@unique([postId, userId])
+}
+
+model Resource {
+  id           String             @id @default(cuid())
+  title        String
+  description  String?
+  url          String
+  subject      String?
+  difficulty   String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  bookmarks    ResourceBookmark[]
+  views        ResourceView[]
+}
+
+model ResourceBookmark {
+  id           String    @id @default(cuid())
+  resourceId   String
+  userId       String
+  createdAt    DateTime  @default(now())
+
+  resource     Resource  @relation(fields: [resourceId], references: [id])
+  user         User      @relation(fields: [userId], references: [id])
+
+  @@unique([resourceId, userId])
+}
+
+model ResourceView {
+  id           String    @id @default(cuid())
+  resourceId   String
+  userId       String
+  createdAt    DateTime  @default(now())
+
+  resource     Resource  @relation(fields: [resourceId], references: [id])
+  user         User      @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id           String           @id @default(cuid())
+  userId       String
+  type         NotificationType
+  message      String
+  payload      Json?
+  createdAt    DateTime         @default(now())
+  readAt       DateTime?
+
+  user         User             @relation(fields: [userId], references: [id])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+
