@@ -1,11 +1,12 @@
 import { DashboardShell } from "@/components/DashboardShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Plus } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { api } from "@/lib/api";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FormEvent, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 type ProjectsResponse = {
   projects: {
@@ -19,65 +20,26 @@ type ProjectsResponse = {
 
 const Projects = () => {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const navigate = useNavigate();
 
   const { data } = useQuery<ProjectsResponse>({
     queryKey: ["projects"],
     queryFn: () => api.get<ProjectsResponse>("/projects"),
   });
 
-  const createProject = useMutation({
-    mutationFn: (body: { title: string; description?: string }) =>
-      api.post<{ project: unknown }>("/projects", body),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      toast({ title: "Project created" });
-      setTitle("");
-      setDescription("");
-    },
-  });
-
-  const onSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    createProject.mutate({ title, description });
-  };
-
   return (
     <DashboardShell>
       <div className="max-w-5xl mx-auto space-y-6">
-        <Card className="bg-background/60 backdrop-blur border-border/60">
-          <CardHeader>
-            <CardTitle>Create a research project</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form
-              onSubmit={onSubmit}
-              className="flex flex-col gap-3 sm:flex-row sm:items-end"
-            >
-              <div className="flex-1 space-y-1.5">
-                <Input
-                  placeholder="Project title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  required
-                />
-                <Input
-                  placeholder="Short description (optional)"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                />
-              </div>
-              <Button
-                type="submit"
-                disabled={createProject.isPending || !title.trim()}
-              >
-                {createProject.isPending ? "Creating..." : "Create project"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Research Projects</h1>
+            <p className="text-muted-foreground">Manage and track your research missions.</p>
+          </div>
+          <Button onClick={() => navigate("/projects/new")}>
+            <Plus className="w-4 h-4 mr-2" />
+            New Project
+          </Button>
+        </div>
 
         <Card className="bg-background/60 backdrop-blur border-border/60">
           <CardHeader>

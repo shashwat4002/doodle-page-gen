@@ -10,6 +10,9 @@ const router = express.Router();
 const createProjectSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
+  field: z.string().optional(),
+  objective: z.string().optional(),
+  proposalUrl: z.string().url().optional(),
 });
 
 const updateStageSchema = z.object({
@@ -34,13 +37,39 @@ router.post(
   validateBody(createProjectSchema),
   async (req, res, next) => {
     try {
-      const { title, description } = req.body;
+      const { title, description, field, objective, proposalUrl } = req.body;
 
       const project = await prisma.project.create({
         data: {
           title,
           description,
+          field,
+          objective,
           ownerId: req.user.id,
+          // Auto Pipeline Generation
+          stages: {
+            create: [
+              { stage: "EXPLORATION", completion: 0 },
+              { stage: "TOPIC_DISCOVERY", completion: 0 },
+              { stage: "LITERATURE_REVIEW", completion: 0 },
+              { stage: "METHODOLOGY", completion: 0 },
+              { stage: "EXECUTION", completion: 0 },
+              { stage: "DOCUMENTATION", completion: 0 },
+              { stage: "PUBLICATION", completion: 0 },
+            ],
+          },
+          ...(proposalUrl && {
+            documents: {
+              create: {
+                name: "Research Proposal",
+                url: proposalUrl,
+                fileType: "PDF",
+              },
+            },
+          }),
+        },
+        include: {
+          stages: true,
         },
       });
 

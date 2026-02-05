@@ -82,6 +82,8 @@ model Project {
   ownerId          String
   title            String
   description      String?
+  field            String?
+  objective        String?
   status           String                 @default("active")
   currentStage     ResearchStage?
   createdAt        DateTime               @default(now())

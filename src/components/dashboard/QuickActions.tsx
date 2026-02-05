@@ -14,10 +14,11 @@ export const QuickActions = () => {
   const navigate = useNavigate();
 
   const actions = [
-    { label: "View Projects", icon: FolderKanban, href: "/projects", color: "text-primary" },
-    { label: "Find Mentors", icon: UserCheck, href: "/matching", color: "text-secondary" },
-    { label: "Browse Resources", icon: BookOpen, href: "/resources", color: "text-accent" },
-    { label: "Community Forum", icon: Users, href: "/community", color: "text-primary" },
+    { label: "New Project", icon: Rocket, href: "/projects/new", color: "text-primary" },
+    { label: "View Projects", icon: FolderKanban, href: "/projects", color: "text-secondary" },
+    { label: "Find Mentors", icon: UserCheck, href: "/matching", color: "text-accent" },
+    { label: "Browse Resources", icon: BookOpen, href: "/resources", color: "text-primary" },
+    { label: "Community Forum", icon: Users, href: "/community", color: "text-secondary" },
   ];
 
   return (
